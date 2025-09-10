@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from flask import Blueprint,render_template, request, redirect, url_for, session, flash, jsonify
+from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from models import User, Calculation, ActivityLog, Experiment, ChatMessage
 from chemical_database import CHEMICAL_DATABASE, calculate_reagent
 from fluid_mechanics import process_experiment_data
@@ -8,7 +8,7 @@ from enhanced_chatbot import enhanced_chatbot
 from pubchem_fetcher import fetch_chemical_data
 from enhanced_chemical_database import get_chemical_data, search_chemicals, get_chemical_properties_summary, calculate_reagent_enhanced
 from chemllm_integration import chemllm, is_chemllm_available, generate_chemllm_response, get_chemllm_info
-from app import db 
+
 def log_activity(user_id, action_type, description):
     """Helper function to log user activities"""
     activity = ActivityLog(
