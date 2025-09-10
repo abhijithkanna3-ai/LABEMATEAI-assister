@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block title %}Voice-Command Reagent Calculator - LabMate AI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-1">
+                <i class="fas fa-microphone me-2 text-primary"></i>
+                Voice-Command Reagent Calculator
+            </h1>
+            <div class="mt-3">
+                <a href="{{ url_for('calculator') }}?type=fluid" class="btn btn-info btn-sm">
+                    <i class="fas fa-tachometer-alt me-1"></i>Switch to Fluid Mechanics Calculator
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Calculator Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Voice Command Section -->
+                    <div class="text-center mb-4">
+                        <button id="voiceBtn" class="btn btn-primary btn-lg" onclick="startVoiceCommand()">
+                            <i class="fas fa-microphone me-2"></i>Start Voice Command
+                        </button>
+                        <div id="voiceStatus" class="mt-2 text-muted"></div>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <span class="text-muted">Or Enter Manually</span>
+                    </div>
+
+                    <!-- Manual Input Form -->
+                    <form id="calculatorForm" method="POST" action="{{ url_for('calculate') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="reagent" class="form-label">Reagent</label>
+                                <select class="form-select" id="reagent" name="reagent" required>
+                                    <option value="">Select reagent...</option>
+                                    {% for chemical in chemicals %}
+                                        <option value="{{ chemical }}">{{ chemical }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="molarity" class="form-label">Molarity (M)</label>
+                                <input type="number" class="form-control" id="molarity" name="molarity" 
+                                       step="0.001" min="0" placeholder="0.1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="volume" class="form-label">Volume (mL)</label>
+                                <input type="number" class="form-control" id="volume" name="volume" 
+                                       step="0.1" min="0" placeholder="250" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-calculator me-2"></i>Calculate
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Results Section -->
+                    <div id="results" class="mt-4" style="display: none;">
+                        <hr>
+                        <h5>Calculation Results</h5>
+                        <div id="resultContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Example Voice Commands -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>Example Voice Commands
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="example-command mb-3">
+                                <div class="fw-medium text-primary">"Calculate 0.1 M NaCl for 250mL"</div>
+                            </div>
+                            <div class="example-command mb-3">
+                                <div class="fw-medium text-primary">"How much sodium hydroxide for 0.5M in 500mL?"</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="example-command mb-3">
+                                <div class="fw-medium text-primary">"I need 2 molar potassium permanganate for 1 liter"</div>
+                            </div>
+                            <div class="example-command mb-3">
+                                <div class="fw-medium text-primary">"Calculate glucose 0.08 M for 250mL"</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculation History -->
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2 text-info"></i>Calculation History
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="refreshHistory()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                        <a href="{{ url_for('export_calculations_pdf') }}" class="btn btn-sm btn-success">
+                            <i class="fas fa-file-pdf me-1"></i>Download PDF
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="historyContent">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading calculation history...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Common Reagents -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-flask me-2 text-info"></i>Common Reagents
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for chemical, data in chemicals.items() %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <div class="fw-medium">{{ chemical }}</div>
+                                <small class="text-muted">{{ data.formula }}</small>
+                            </div>
+                            <small class="text-muted">{{ "%.2f"|format(data.molar_mass) }} g/mol</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2 text-success"></i>Quick Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Use chemical name or formula in commands
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Specify molarity with "M" or "molar"
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Volume can be in mL or L
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Results include step-by-step instructions
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check text-success me-2"></i>
+                            All calculations are automatically logged
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calculation Details Modal -->
+<div class="modal fade" id="calculationDetailsModal" tabindex="-1" aria-labelledby="calculationDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="calculationDetailsTitle">Calculation Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2 text-primary"></i>Calculation Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Date & Time:</strong></td>
+                                        <td id="calculationDate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Reagent:</strong></td>
+                                        <td id="calculationReagent">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Formula:</strong></td>
+                                        <td><code id="calculationFormula">-</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Molarity:</strong></td>
+                                        <td id="calculationMolarity">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Volume:</strong></td>
+                                        <td id="calculationVolume">-</td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td><strong>Mass Needed:</strong></td>
+                                        <td><strong id="calculationMass">-</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-calculator me-2 text-success"></i>Calculation Steps</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="calculationSteps">
+                                    <p class="text-muted">Click on a calculation row to view detailed steps.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card border-info">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-flask me-2 text-info"></i>Preparation Instructions</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="preparationInstructions">
+                                    <ol class="mb-0">
+                                        <li>Weigh out the calculated mass of the reagent using an analytical balance</li>
+                                        <li>Add the reagent to a clean, dry beaker or volumetric flask</li>
+                                        <li>Add approximately 80% of the final volume of distilled water</li>
+                                        <li>Stir until the reagent is completely dissolved</li>
+                                        <li>Add distilled water to reach the final volume</li>
+                                        <li>Mix thoroughly to ensure uniform concentration</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="recreateCalculation()">
+                    <i class="fas fa-redo me-2"></i>Recreate This Calculation
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+<script src="{{ url_for('static', filename='js/calculator.js') }}"></script>
+<script>
+// Load calculation history on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCalculationHistory();
+});
+
+function loadCalculationHistory() {
+    fetch('/api/calculation-history')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayCalculationHistory(data.calculations);
+            } else {
+                document.getElementById('historyContent').innerHTML = 
+                    '<div class="text-center text-muted">No calculations found.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading calculation history:', error);
+            document.getElementById('historyContent').innerHTML = 
+                '<div class="text-center text-danger">Error loading calculation history.</div>';
+        });
+}
+
+function displayCalculationHistory(calculations) {
+    const historyContent = document.getElementById('historyContent');
+    
+    if (calculations.length === 0) {
+        historyContent.innerHTML = '<div class="text-center text-muted">No calculations found.</div>';
+        return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-hover">';
+    html += '<thead class="table-light"><tr>';
+    html += '<th>Date</th><th>Reagent</th><th>Formula</th><th>Molarity (M)</th><th>Volume (mL)</th><th>Mass Needed (g)</th>';
+    html += '</tr></thead><tbody>';
+    
+    calculations.forEach(calc => {
+        html += `<tr class="calculation-row" style="cursor: pointer;" onclick="openCalculationDetails(${calc.id})" data-calculation='${JSON.stringify(calc)}'>`;
+        html += `<td><small>${new Date(calc.created_at).toLocaleString()}</small></td>`;
+        html += `<td><strong>${calc.reagent}</strong></td>`;
+        html += `<td><code>${calc.formula || 'N/A'}</code></td>`;
+        html += `<td>${calc.molarity ? calc.molarity.toFixed(2) : 'N/A'}</td>`;
+        html += `<td>${calc.volume ? calc.volume.toFixed(2) : 'N/A'}</td>`;
+        html += `<td><strong class="text-success">${calc.mass_needed ? calc.mass_needed.toFixed(4) : 'N/A'}</strong></td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    
+    // Add summary
+    html += `<div class="mt-3 p-3 bg-light rounded">`;
+    html += `<small class="text-muted">`;
+    html += `<i class="fas fa-info-circle me-1"></i>`;
+    html += `Total calculations: <strong>${calculations.length}</strong> | `;
+    html += `Last updated: <strong>${new Date().toLocaleString()}</strong>`;
+    html += `</small></div>`;
+    
+    historyContent.innerHTML = html;
+}
+
+function refreshHistory() {
+    const refreshBtn = event.target;
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    loadCalculationHistory();
+    
+    setTimeout(() => {
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+    }, 1000);
+}
+
+function openCalculationDetails(calculationId) {
+    // Find the calculation data from the clicked row
+    const row = event.target.closest('.calculation-row');
+    const calculationData = JSON.parse(row.getAttribute('data-calculation'));
+    
+    // Store current calculation data for recreation
+    window.currentCalculationData = calculationData;
+    
+    // Populate the modal with calculation details
+    document.getElementById('calculationDetailsTitle').textContent = `Calculation Details - ${calculationData.reagent}`;
+    document.getElementById('calculationDate').textContent = new Date(calculationData.created_at).toLocaleString();
+    document.getElementById('calculationReagent').textContent = calculationData.reagent;
+    document.getElementById('calculationFormula').textContent = calculationData.formula || 'N/A';
+    document.getElementById('calculationMolarity').textContent = calculationData.molarity ? calculationData.molarity.toFixed(2) + ' M' : 'N/A';
+    document.getElementById('calculationVolume').textContent = calculationData.volume ? calculationData.volume.toFixed(2) + ' mL' : 'N/A';
+    document.getElementById('calculationMass').textContent = calculationData.mass_needed ? calculationData.mass_needed.toFixed(4) + ' g' : 'N/A';
+    
+    // Display calculation steps
+    displayCalculationSteps(calculationData);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('calculationDetailsModal'));
+    modal.show();
+}
+
+function displayCalculationSteps(calculationData) {
+    const stepsDiv = document.getElementById('calculationSteps');
+    
+    if (calculationData.reagent === 'Pitot Tube Experiment') {
+        stepsDiv.innerHTML = `
+            <div class="calculation-step">
+                <h6>Pitot Tube Experiment Calculation:</h6>
+                <p><strong>Formula:</strong> Cv = V₀/Vp</p>
+                <p><strong>Where:</strong></p>
+                <ul>
+                    <li>Cv = Coefficient of velocity</li>
+                    <li>V₀ = Velocity through orifice</li>
+                    <li>Vp = Velocity from Pitot tube</li>
+                </ul>
+                <p><strong>Result:</strong> Cv = ${calculationData.mass_needed.toFixed(4)}</p>
+            </div>
+        `;
+    } else {
+        // Standard molarity calculation
+        const molarity = calculationData.molarity || 0;
+        const volume = calculationData.volume || 0;
+        const mass = calculationData.mass_needed || 0;
+        
+        stepsDiv.innerHTML = `
+            <div class="calculation-step">
+                <h6>Molarity Calculation Steps:</h6>
+                <ol>
+                    <li><strong>Given:</strong>
+                        <ul>
+                            <li>Molarity (M) = ${molarity.toFixed(2)} mol/L</li>
+                            <li>Volume = ${volume.toFixed(2)} mL = ${(volume/1000).toFixed(3)} L</li>
+                        </ul>
+                    </li>
+                    <li><strong>Calculate moles needed:</strong>
+                        <br>Moles = Molarity × Volume (in L)
+                        <br>Moles = ${molarity.toFixed(2)} × ${(volume/1000).toFixed(3)} = ${(molarity * volume/1000).toFixed(4)} mol
+                    </li>
+                    <li><strong>Calculate mass needed:</strong>
+                        <br>Mass = Moles × Molar Mass
+                        <br>Mass = ${(molarity * volume/1000).toFixed(4)} × Molar Mass = ${mass.toFixed(4)} g
+                    </li>
+                </ol>
+            </div>
+        `;
+    }
+}
+
+function recreateCalculation() {
+    if (!window.currentCalculationData) return;
+    
+    const calcData = window.currentCalculationData;
+    
+    // Fill the form with the calculation data
+    document.getElementById('reagent').value = calcData.reagent;
+    document.getElementById('molarity').value = calcData.molarity || '';
+    document.getElementById('volume').value = calcData.volume || '';
+    
+    // Close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('calculationDetailsModal'));
+    modal.hide();
+    
+    // Scroll to the calculator form
+    document.getElementById('calculatorForm').scrollIntoView({ behavior: 'smooth' });
+    
+    // Highlight the form briefly
+    document.getElementById('calculatorForm').style.border = '2px solid #007bff';
+    setTimeout(() => {
+        document.getElementById('calculatorForm').style.border = '';
+    }, 2000);
+}
+</script>
+{% endblock %}

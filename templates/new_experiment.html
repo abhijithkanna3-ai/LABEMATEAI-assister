@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}New Experiment Log - LabMate AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">New Experiment Log</h2>
+                    <p class="text-muted mb-0">Document your laboratory experiment with detailed procedures and observations</p>
+                </div>
+                <a href="{{ url_for('documentation') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Experiment Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('new_experiment') }}">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="title" class="form-label">Experiment Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" required 
+                                       placeholder="e.g., Synthesis of Aspirin from Salicylic Acid">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" 
+                                          placeholder="Brief overview of the experiment objectives and expected outcomes"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="procedures" class="form-label">Procedures <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="procedures" name="procedures" rows="6" required 
+                                          placeholder="Step-by-step experimental procedures:
+1. Weigh 2.0g of salicylic acid
+2. Add 5.0mL of acetic anhydride
+3. Add 3 drops of concentrated sulfuric acid
+4. Heat mixture to 60°C for 15 minutes
+5. Cool and add 20mL of ice water
+6. Filter and recrystallize"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="observations" class="form-label">Observations</label>
+                                <textarea class="form-control" id="observations" name="observations" rows="4" 
+                                          placeholder="Record all observations during the experiment:
+- Color changes
+- Temperature readings
+- Physical changes
+- Any unexpected results"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="results" class="form-label">Results</label>
+                                <textarea class="form-control" id="results" name="results" rows="4" 
+                                          placeholder="Final results and analysis:
+- Yield: 1.85g (92.5%)
+- Melting point: 134-136°C
+- Purity confirmed by TLC
+- IR spectrum matches reference"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('documentation') }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Experiment Log
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Tips for Good Documentation</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Be specific</strong><br>
+                            <small class="text-muted">Include exact quantities, temperatures, and times</small>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Record everything</strong><br>
+                            <small class="text-muted">Even unexpected observations can be valuable</small>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Use proper units</strong><br>
+                            <small class="text-muted">Always specify units (g, mL, °C, etc.)</small>
+                        </li>
+                        <li class="mb-3">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Include safety notes</strong><br>
+                            <small class="text-muted">Document any safety precautions taken</small>
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Save regularly</strong><br>
+                            <small class="text-muted">Your work is automatically saved when submitted</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Safety Reminder</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Before starting any experiment:</strong></p>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1"><i class="fas fa-shield-alt text-warning me-2"></i>Review MSDS sheets</li>
+                        <li class="mb-1"><i class="fas fa-shield-alt text-warning me-2"></i>Wear appropriate PPE</li>
+                        <li class="mb-1"><i class="fas fa-shield-alt text-warning me-2"></i>Check emergency equipment</li>
+                        <li class="mb-0"><i class="fas fa-shield-alt text-warning me-2"></i>Have a safety plan ready</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-save functionality (optional enhancement)
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, textarea');
+    
+    // Auto-save to localStorage every 30 seconds
+    setInterval(function() {
+        const formData = {};
+        inputs.forEach(input => {
+            if (input.value.trim()) {
+                formData[input.name] = input.value;
+            }
+        });
+        localStorage.setItem('experiment_draft', JSON.stringify(formData));
+    }, 30000);
+    
+    // Restore draft on page load
+    const draft = localStorage.getItem('experiment_draft');
+    if (draft) {
+        try {
+            const formData = JSON.parse(draft);
+            Object.keys(formData).forEach(name => {
+                const input = form.querySelector(`[name="${name}"]`);
+                if (input && !input.value) {
+                    input.value = formData[name];
+                }
+            });
+        } catch (e) {
+            console.log('No valid draft found');
+        }
+    }
+    
+    // Clear draft on successful submit
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('experiment_draft');
+    });
+});
+</script>
+{% endblock %}

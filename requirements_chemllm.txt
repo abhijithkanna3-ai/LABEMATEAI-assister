@@ -1,0 +1,17 @@
+# ChemLLM Dependencies
+# Install these packages to use the ChemLLM feature
+
+# Core ML libraries
+torch>=2.0.0
+transformers>=4.30.0
+
+# Additional dependencies for ChemLLM
+einops>=0.6.0
+accelerate>=0.20.0
+
+# Optional: For better performance
+# torch-audio  # if using audio features
+# torch-vision  # if using vision features
+
+# Installation command:
+# pip install -r requirements_chemllm.txt

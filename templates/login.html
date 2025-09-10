@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to LabMate AI{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-flask text-primary" style="font-size: 3rem;"></i>
+                            <h2 class="mt-3 mb-2">Welcome to LabMate AI</h2>
+                            <p class="text-muted">Sign in to your laboratory assistant</p>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('login') }}">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Your Name</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           placeholder="Enter your name" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Laboratory Role</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-user-tag"></i>
+                                    </span>
+                                    <select class="form-select" id="role" name="role" required>
+                                        <option value="">Select your role</option>
+                                        <option value="Researcher">Researcher</option>
+                                        <option value="Lab Technician">Lab Technician</option>
+                                        <option value="Graduate Student">Graduate Student</option>
+                                        <option value="Undergraduate Student">Undergraduate Student</option>
+                                        <option value="Lab Manager">Lab Manager</option>
+                                        <option value="Principal Investigator">Principal Investigator</option>
+                                        <option value="Safety Officer">Safety Officer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="institution" class="form-label">Institution/Company (Optional)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-building"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="institution" name="institution" 
+                                           placeholder="Your institution or company">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100 py-2">
+                                <i class="fas fa-sign-in-alt me-2"></i>Start Laboratory Session
+                            </button>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Your session data is kept private and secure
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-6 text-center">
+                        <div class="card border-0 bg-transparent">
+                            <div class="card-body">
+                                <i class="fas fa-microphone text-primary fs-1"></i>
+                                <h6 class="mt-2">Voice Commands</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 text-center">
+                        <div class="card border-0 bg-transparent">
+                            <div class="card-body">
+                                <i class="fas fa-calculator text-primary fs-1"></i>
+                                <h6 class="mt-2">Smart Calculations</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

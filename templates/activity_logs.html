@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Logs & Audit Trail - LabMate AI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-1">
+                <i class="fas fa-history me-2 text-primary"></i>
+                Activity Logs & Audit Trail
+            </h1>
+            <p class="text-muted mb-0">Complete audit trail of all laboratory activities and system interactions.</p>
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="searchActivities" class="form-label">Search Activities</label>
+                            <input type="text" class="form-control" id="searchActivities" 
+                                   placeholder="Search descriptions..." value="{{ search or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="actionType" class="form-label">Action Type</label>
+                            <select class="form-select" id="actionType">
+                                <option value="">All Types</option>
+                                <option value="Calculation" {% if action_type == 'Calculation' %}selected{% endif %}>Calculations</option>
+                                <option value="MSDS Lookup" {% if action_type == 'MSDS Lookup' %}selected{% endif %}>MSDS Lookups</option>
+                                <option value="Experiment" {% if action_type == 'Experiment' %}selected{% endif %}>Experiments</option>
+                                <option value="Authentication" {% if action_type == 'Authentication' %}selected{% endif %}>Authentication</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="dateFilter" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="dateFilter" value="{{ date_filter or '' }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100 me-2" onclick="applyFilters()">
+                                <i class="fas fa-search me-1"></i>Filter
+                            </button>
+                            <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="display-6 text-primary fw-bold">{{ activities.total }}</div>
+                            <div class="text-muted small">Total Activities</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="display-6 text-success fw-bold">0</div>
+                            <div class="text-muted small">Voice Commands</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-calculator text-primary fs-1 mb-2"></i>
+                    <div class="h4 text-primary">1</div>
+                    <div class="text-muted">Calculations</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-microphone text-success fs-1 mb-2"></i>
+                    <div class="h4 text-success">0</div>
+                    <div class="text-muted">Voice Commands</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-file-alt text-warning fs-1 mb-2"></i>
+                    <div class="h4 text-warning">0</div>
+                    <div class="text-muted">MSDS Lookups</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-file-medical text-info fs-1 mb-2"></i>
+                    <div class="h4 text-info">0</div>
+                    <div class="text-muted">Reports Generated</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-timeline me-2 text-primary"></i>Activity Timeline
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="exportLogs()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="refreshLogs()">
+                            <i class="fas fa-sync me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if activities.items %}
+                        <div class="timeline">
+                            {% for activity in activities.items %}
+                            <div class="timeline-item d-flex align-items-start mb-4">
+                                <div class="timeline-marker me-3">
+                                    {% if activity.action_type == 'Calculation' %}
+                                        <div class="timeline-icon bg-primary">
+                                            <i class="fas fa-calculator text-white"></i>
+                                        </div>
+                                    {% elif activity.action_type == 'MSDS Lookup' %}
+                                        <div class="timeline-icon bg-warning">
+                                            <i class="fas fa-file-alt text-white"></i>
+                                        </div>
+                                    {% elif activity.action_type == 'Experiment' %}
+                                        <div class="timeline-icon bg-success">
+                                            <i class="fas fa-flask text-white"></i>
+                                        </div>
+                                    {% elif activity.action_type == 'Authentication' %}
+                                        <div class="timeline-icon bg-info">
+                                            <i class="fas fa-sign-in-alt text-white"></i>
+                                        </div>
+                                    {% else %}
+                                        <div class="timeline-icon bg-secondary">
+                                            <i class="fas fa-circle text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="timeline-content flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ activity.action_type }}</h6>
+                                            <p class="mb-1 text-muted">{{ activity.description }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ activity.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}
+                                            </small>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">
+                                                {{ activity.timestamp.strftime('%H:%M') }}<br>
+                                                <span class="small">{{ activity.timestamp.strftime('%d/%m') }}</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if activities.pages > 1 %}
+                        <nav aria-label="Activity logs pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if activities.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('activity_logs', page=activities.prev_num, search=search, action_type=action_type, date=date_filter) }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in activities.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != activities.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('activity_logs', page=page_num, search=search, action_type=action_type, date=date_filter) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if activities.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('activity_logs', page=activities.next_num, search=search, action_type=action_type, date=date_filter) }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-history text-muted" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3 text-muted">No Activity Logs</h4>
+                            <p class="text-muted">No activities recorded yet. Start using LabMate AI to see your activity trail.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function clearFilters() {
+    document.getElementById('searchActivities').value = '';
+    document.getElementById('actionType').value = '';
+    document.getElementById('dateFilter').value = '';
+}
+
+function exportLogs() {
+    // Export activity logs to PDF
+    fetch('/export_activity_logs_pdf', {
+        method: 'GET'
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        } else {
+            throw new Error('Failed to generate PDF');
+        }
+    })
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const now = new Date();
+        const indianDate = now.getDate().toString().padStart(2, '0') + 
+                          (now.getMonth() + 1).toString().padStart(2, '0') + 
+                          now.getFullYear() + '_' +
+                          now.getHours().toString().padStart(2, '0') +
+                          now.getMinutes().toString().padStart(2, '0') +
+                          now.getSeconds().toString().padStart(2, '0');
+        a.download = `activity_logs_${indianDate}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error downloading PDF:', error);
+        alert('Error downloading PDF: ' + error.message);
+    });
+}
+
+function refreshLogs() {
+    location.reload();
+}
+
+// Add filtering functionality
+document.getElementById('searchActivities').addEventListener('input', filterActivities);
+document.getElementById('actionType').addEventListener('change', filterActivities);
+document.getElementById('dateFilter').addEventListener('change', filterActivities);
+
+function applyFilters() {
+    const searchTerm = document.getElementById('searchActivities').value;
+    const actionType = document.getElementById('actionType').value;
+    const dateFilter = document.getElementById('dateFilter').value;
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('search', searchTerm);
+    if (actionType) params.append('action_type', actionType);
+    if (dateFilter) params.append('date', dateFilter);
+    
+    // Redirect to filtered results
+    const currentUrl = new URL(window.location);
+    currentUrl.search = params.toString();
+    window.location.href = currentUrl.toString();
+}
+
+function filterActivities() {
+    // Auto-apply filters on input change (optional)
+    // applyFilters();
+}
+</script>
+{% endblock %}

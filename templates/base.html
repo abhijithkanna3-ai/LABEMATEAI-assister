@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LabMate AI{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    {% if session.user_id %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-flask me-2"></i>
+                LabMate AI
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-home me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('calculator') }}">
+                            <i class="fas fa-calculator me-1"></i>Calculator
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('unit_converter') }}">
+                            <i class="fas fa-exchange-alt me-1"></i>Unit Converter
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('msds') }}">
+                            <i class="fas fa-shield-alt me-1"></i>MSDS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('safety') }}">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Safety
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('documentation') }}">
+                            <i class="fas fa-file-alt me-1"></i>Documentation
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('activity_logs') }}">
+                            <i class="fas fa-history me-1"></i>Activity Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chemllm_page') }}">
+                            <i class="fas fa-brain me-1"></i>ChemLLM
+                        </a>
+                    </li>
+                </ul>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i>{{ session.user_name }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="{% if session.user_id %}container-fluid mt-4{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                <i class="fas fa-flask me-1"></i>
+                LabMate AI - Your Smartest Lab Partner. Always On.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Welcome Popup -->
+    <div id="welcomePopup" class="welcome-popup" style="display: none;">
+        <div class="welcome-content">
+            <div class="welcome-header">
+                <i class="fas fa-robot"></i>
+                <h5>LabMate AI is here to help!</h5>
+                <button type="button" class="btn-close" id="closeWelcome"></button>
+            </div>
+            <div class="welcome-body">
+                <p id="welcomeQuote">Ready to assist with your laboratory work!</p>
+            </div>
+            <div class="welcome-footer">
+                <button type="button" class="btn btn-primary btn-sm" id="openChatFromPopup">
+                    <i class="fas fa-comments me-1"></i>Start Chatting
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chatbot Widget -->
+    <div id="floatingChatbot" class="floating-chatbot">
+        <!-- Chat Toggle Button -->
+        <div id="chatToggle" class="chat-toggle">
+            <i class="fas fa-robot"></i>
+            <span class="chat-badge" id="messageBadge" style="display: none;">1</span>
+        </div>
+        
+        <!-- Chat Window -->
+        <div id="chatWindow" class="chat-window" style="display: none;">
+            <div class="chat-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-robot me-2"></i>
+                        LabMate AI
+                    </h6>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-light" id="minimizeChat" title="Minimize">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="closeChat" title="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resize Handle -->
+            <div class="resize-handle"></div>
+            
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessagesWidget">
+                <div class="welcome-message">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-robot fa-2x mb-2"></i>
+                        <p class="mb-2">Hi! I'm LabMate AI</p>
+                        <p class="small">Ask me about calculations, chemicals, safety, or experiments!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="chat-input">
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" id="messageInputWidget" placeholder="Type your message..." maxlength="500">
+                    <button class="btn btn-primary btn-sm" type="button" id="sendBtnWidget">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="mt-1">
+                    <small class="text-muted">
+                        <span class="example-link" data-example="Calculate 0.1M NaCl for 100mL">Calc</span> |
+                        <span class="example-link" data-example="Tell me about NaOH">Info</span> |
+                        <span class="example-link" data-example="Safety info for H2SO4">Safety</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quick-tour.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/welcome-popup.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/floating-chatbot.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

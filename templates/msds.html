@@ -1,0 +1,907 @@
+{% extends "base.html" %}
+
+{% block title %}Material Safety Data Sheets - LabMate AI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-1">
+                <i class="fas fa-shield-alt me-2 text-warning"></i>
+                Material Safety Data Sheets
+            </h1>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control" id="msdsSearch" 
+                               placeholder="Enter chemical name, formula, or CAS number">
+                        <button class="btn btn-primary" onclick="searchMSDSWithGemini()">
+                            <i class="fas fa-robot me-1"></i>Search MSDS
+                        </button>
+                    </div>
+                    <div class="mt-3 d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-primary" onclick="startVoiceSearch()">
+                            <i class="fas fa-microphone me-1"></i>Voice Search
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="searchMSDS()">
+                            <i class="fas fa-search me-1"></i>Local Search
+                        </button>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="geminiToggle" checked>
+                            <label class="form-check-label" for="geminiToggle">
+                                <i class="fas fa-brain me-1"></i>Enable AI Enhancement
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Main search uses AI to provide comprehensive MSDS information. Local search only checks the local database.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    <div id="searchResults" class="row mb-4" style="display: none;">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Search Results</h5>
+                    <div id="searchStatus" class="badge bg-secondary">
+                        <i class="fas fa-database me-1"></i>Local Database
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Access -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2 text-primary"></i>Quick Access
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% set quick_access = ['Sodium Chloride', 'Sodium Hydroxide', 'Hydrochloric Acid', 
+                                               'Sulfuric Acid', 'Ethanol', 'Glucose', 'Acetic Acid', 'Copper Sulfate'] %}
+                        {% for chemical in quick_access %}
+                        <div class="col-6 col-md-4 col-lg-3">
+                            <button class="btn btn-outline-secondary w-100 h-100 p-3" 
+                                    onclick="quickMSDSLookup('{{ chemical }}')">
+                                <div class="small">{{ chemical }}</div>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emergency Contacts -->
+        <div class="col-lg-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-phone me-2"></i>Emergency Contacts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="fw-bold text-danger">Emergency Services</div>
+                        <div class="h4 text-danger">911</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="fw-bold">Poison Control</div>
+                        <div class="h5">1-800-222-1222</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="fw-bold">Lab Safety Officer</div>
+                        <div>Extension 5678</div>
+                    </div>
+                    <div class="mb-0">
+                        <div class="fw-bold">Lab Supervisor</div>
+                        <div>Extension 2234</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Periodic Table -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-atom me-2 text-primary"></i>Interactive Periodic Table
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="periodic-table"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chemical Database -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2 text-info"></i>Available Chemicals Database
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Chemical Name</th>
+                                    <th>Formula</th>
+                                    <th>Molar Mass (g/mol)</th>
+                                    <th>Primary Hazards</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for name, data in chemicals.items() %}
+                                <tr>
+                                    <td class="fw-medium">{{ name }}</td>
+                                    <td><code>{{ data.formula }}</code></td>
+                                    <td>{{ "%.2f"|format(data.molar_mass) }}</td>
+                                    <td>
+                                        {% for hazard in data.hazards %}
+                                            {% if hazard == 'Corrosive' %}
+                                                <span class="badge bg-danger">{{ hazard }}</span>
+                                            {% elif hazard == 'Flammable' %}
+                                                <span class="badge bg-warning">{{ hazard }}</span>
+                                            {% elif hazard == 'Toxic' %}
+                                                <span class="badge bg-dark">{{ hazard }}</span>
+                                            {% elif hazard == 'None' %}
+                                                <span class="badge bg-success">Safe</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ hazard }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="quickMSDSLookup('{{ name }}')">
+                                            <i class="fas fa-eye"></i> View MSDS
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for displaying element details -->
+<div id="element-modal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Element Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-content">
+                    <!-- Element details will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="search-msds-btn">
+                    <i class="fas fa-search me-1"></i>Search MSDS
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+<style>
+    /* Enhanced Periodic Table Styles */
+    #periodic-table {
+        display: grid;
+        grid-template-columns: repeat(18, minmax(0, 1fr));
+        grid-template-rows: repeat(10, minmax(0, 1fr));
+        gap: 4px;
+        max-width: 1400px;
+        margin: auto;
+        padding: 1rem;
+    }
+
+    .element {
+        position: relative;
+        padding: 4px;
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .element:hover {
+        transform: scale(1.1);
+        z-index: 10;
+        border-color: rgba(0,0,0,0.3);
+    }
+
+    .atomic-number {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        font-size: 0.6rem;
+        line-height: 1;
+    }
+
+    .symbol {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .name {
+        font-size: 0.6rem;
+        text-align: center;
+        line-height: 1;
+    }
+    
+    .atomic-mass {
+        font-size: 0.5rem;
+        text-align: center;
+        line-height: 1;
+        margin-top: 2px;
+    }
+
+    /* Category Color Classes using enhanced color palette */
+    .alkali-metal { background-color: #fca5a5; } /* red-300 */
+    .alkaline-earth-metal { background-color: #fdba74; } /* orange-300 */
+    .lanthanide { background-color: #fde68a; } /* amber-200 */
+    .actinide { background-color: #fcd34d; } /* amber-300 */
+    .transition-metal { background-color: #a5b4fc; } /* indigo-300 */
+    .post-transition-metal { background-color: #93c5fd; } /* blue-300 */
+    .metalloid { background-color: #6ee7b7; } /* emerald-300 */
+    .reactive-nonmetal { background-color: #86efac; } /* green-300 */
+    .noble-gas { background-color: #c4b5fd; } /* violet-300 */
+    .unknown { background-color: #d1d5db; } /* gray-300 */
+
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .symbol { font-size: 1rem; }
+        .name, .atomic-number, .atomic-mass { font-size: 0.5rem; }
+    }
+    @media (max-width: 768px) {
+        #periodic-table { gap: 2px; padding: 0.5rem; }
+        .element { padding: 2px; border-radius: 4px; }
+        .symbol { font-size: 0.8rem; }
+        .name, .atomic-number, .atomic-mass { display: none; }
+        .atomic-number { display: block; top: 2px; left: 2px; }
+    }
+</style>
+<script>
+function searchMSDS() {
+    const query = document.getElementById('msdsSearch').value;
+    if (!query.trim()) return;
+    
+    const useGemini = document.getElementById('geminiToggle').checked;
+    
+    // Show loading state
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('resultsContent');
+    const statusDiv = document.getElementById('searchStatus');
+    
+    resultsDiv.style.display = 'block';
+    contentDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Searching...</p></div>';
+    statusDiv.innerHTML = '<i class="fas fa-search me-1"></i>Searching';
+    statusDiv.className = 'badge bg-info';
+    
+    fetch(`{{ url_for('msds_search') }}?q=${encodeURIComponent(query)}&gemini=${useGemini}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (Array.isArray(data)) {
+                displaySearchResults(data, useGemini);
+            } else if (data.error) {
+                contentDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+                statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Error';
+                statusDiv.className = 'badge bg-danger';
+            } else {
+                displaySearchResults(data, useGemini);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            contentDiv.innerHTML = `<div class="alert alert-danger">Error searching MSDS database: ${error.message}</div>`;
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Error';
+            statusDiv.className = 'badge bg-danger';
+        });
+}
+
+function searchMSDSWithGemini() {
+    const query = document.getElementById('msdsSearch').value;
+    if (!query.trim()) {
+        alert('Please enter a chemical name to search');
+        return;
+    }
+    
+    console.log('Starting AI search for:', query);
+    
+    // Check if user is logged in by trying a simple request first
+    fetch('{{ url_for("msds_search") }}?q=test&gemini=false')
+        .then(response => {
+            if (response.status === 401) {
+                console.log('User not authenticated, redirecting to login');
+                window.location.href = '{{ url_for("login") }}';
+                return;
+            }
+            // If authenticated, proceed with AI search
+            performAISearch(query);
+        })
+        .catch(error => {
+            console.error('Auth check failed:', error);
+            // Fallback to local search
+            searchMSDS();
+        });
+}
+
+function performAISearch(query) {
+    // Show loading state
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('resultsContent');
+    const statusDiv = document.getElementById('searchStatus');
+    
+    resultsDiv.style.display = 'block';
+    contentDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Searching with AI...</p></div>';
+    statusDiv.innerHTML = '<i class="fas fa-robot me-1"></i>AI Search';
+    statusDiv.className = 'badge bg-success';
+    
+    fetch('{{ url_for("msds_enhanced_search") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            query: query,
+            use_gemini: true,
+            force_gemini: true
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Authentication error - redirect to login or use local search
+                console.log('Authentication required, falling back to local search');
+                searchMSDS();
+                return;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data && data.success) {
+            displayEnhancedSearchResults(data.results, true);
+        } else if (data && data.error) {
+            if (data.error.includes('Not authenticated')) {
+                console.log('Authentication error, falling back to local search');
+                searchMSDS();
+            } else {
+                contentDiv.innerHTML = `<div class="alert alert-danger">Error: ${data.error}</div>`;
+            }
+        } else {
+            contentDiv.innerHTML = `<div class="alert alert-danger">Unexpected response format</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        console.log('Falling back to local search due to error');
+        searchMSDS();
+    });
+}
+
+function quickMSDSLookup(chemical) {
+    document.getElementById('msdsSearch').value = chemical;
+    searchMSDSWithGemini();
+}
+
+function displaySearchResults(results, geminiUsed = false) {
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('resultsContent');
+    const statusDiv = document.getElementById('searchStatus');
+    
+    if (results.length === 0) {
+        contentDiv.innerHTML = '<div class="alert alert-warning">No chemicals found matching your search.</div>';
+        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>No Results';
+        statusDiv.className = 'badge bg-warning';
+    } else {
+        let html = '<div class="row g-3">';
+        results.forEach(chemical => {
+            const sourceBadge = chemical.source === 'gemini' ? 
+                '<span class="badge bg-success ms-2"><i class="fas fa-robot me-1"></i>AI Enhanced</span>' : 
+                '<span class="badge bg-primary ms-2"><i class="fas fa-database me-1"></i>Local</span>';
+            
+            // Create hazard badges
+            const hazards = Array.isArray(chemical.hazards) ? chemical.hazards : [];
+            const hazardBadges = hazards.map(hazard => {
+                let badgeClass = 'bg-secondary';
+                if (hazard.toLowerCase().includes('corrosive')) badgeClass = 'bg-danger';
+                else if (hazard.toLowerCase().includes('flammable')) badgeClass = 'bg-warning';
+                else if (hazard.toLowerCase().includes('toxic')) badgeClass = 'bg-dark';
+                else if (hazard.toLowerCase().includes('none') || hazard.toLowerCase().includes('safe')) badgeClass = 'bg-success';
+                
+                return `<span class="badge ${badgeClass} me-1">${hazard}</span>`;
+            }).join('');
+            
+            html += `
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title d-flex align-items-center">
+                                ${chemical.name}
+                                ${sourceBadge}
+                            </h6>
+                            
+                            <!-- MSDS Safety Information (Priority) -->
+                            <div class="mb-3">
+                                <h6 class="text-danger small"><i class="fas fa-exclamation-triangle me-1"></i>Safety Hazards</h6>
+                                <div class="mb-2">${hazardBadges || '<span class="text-muted small">None identified</span>'}</div>
+                            </div>
+                            
+                            ${chemical.safety_precautions ? `
+                            <div class="mb-3">
+                                <h6 class="text-warning small"><i class="fas fa-shield-alt me-1"></i>Safety Precautions</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.safety_precautions.map(precaution => `<li>${precaution}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${chemical.first_aid ? `
+                            <div class="mb-3">
+                                <h6 class="text-danger small"><i class="fas fa-first-aid me-1"></i>First Aid</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.first_aid.map(aid => `<li>${aid}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${chemical.health_effects ? `
+                            <div class="mb-3">
+                                <h6 class="text-info small"><i class="fas fa-heartbeat me-1"></i>Health Effects</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.health_effects.map(effect => `<li>${effect}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${chemical.personal_protection ? `
+                            <div class="mb-3">
+                                <h6 class="text-primary small"><i class="fas fa-hard-hat me-1"></i>Personal Protection</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.personal_protection.map(protection => `<li>${protection}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Chemical Properties (Secondary) -->
+                            <div class="border-top pt-3">
+                                <h6 class="text-secondary small"><i class="fas fa-flask me-1"></i>Chemical Properties</h6>
+                                <p class="mb-1 small"><strong>Formula:</strong> <code>${chemical.formula || 'N/A'}</code></p>
+                                <p class="mb-1 small"><strong>Molar Mass:</strong> ${chemical.molar_mass && typeof chemical.molar_mass === 'number' ? chemical.molar_mass.toFixed(2) + ' g/mol' : 'Unknown'}</p>
+                            </div>
+                            
+                            ${chemical.storage_requirements ? `
+                            <div class="mt-3">
+                                <h6 class="text-info small"><i class="fas fa-warehouse me-1"></i>Storage</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.storage_requirements.map(req => `<li>${req}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                            
+                            ${chemical.disposal_methods ? `
+                            <div class="mt-3">
+                                <h6 class="text-warning small"><i class="fas fa-recycle me-1"></i>Disposal</h6>
+                                <ul class="mb-0 small">
+                                    ${chemical.disposal_methods.map(method => `<li>${method}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        contentDiv.innerHTML = html;
+        
+        // Update status
+        if (geminiUsed) {
+            statusDiv.innerHTML = '<i class="fas fa-robot me-1"></i>AI Enhanced';
+            statusDiv.className = 'badge bg-success';
+        } else {
+            statusDiv.innerHTML = '<i class="fas fa-database me-1"></i>Local Database';
+            statusDiv.className = 'badge bg-primary';
+        }
+    }
+    
+    resultsDiv.style.display = 'block';
+}
+
+function displayEnhancedSearchResults(results, geminiUsed = false) {
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('resultsContent');
+    const statusDiv = document.getElementById('searchStatus');
+    
+    if (results.length === 0) {
+        contentDiv.innerHTML = '<div class="alert alert-warning">No chemicals found matching your search.</div>';
+        statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>No Results';
+        statusDiv.className = 'badge bg-warning';
+    } else {
+        let html = '<div class="row g-3">';
+        results.forEach(chemical => {
+            const sourceBadge = chemical.source === 'gemini' ? 
+                '<span class="badge bg-success ms-2"><i class="fas fa-robot me-1"></i>AI</span>' : 
+                '<span class="badge bg-primary ms-2"><i class="fas fa-database me-1"></i>Local</span>';
+            
+            html += `
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">${chemical.name} ${sourceBadge}</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Basic Information</h6>
+                                    <p><strong>Formula:</strong> ${chemical.formula || 'Unknown'}</p>
+                                    <p><strong>Molar Mass:</strong> ${chemical.molar_mass && typeof chemical.molar_mass === 'number' ? chemical.molar_mass.toFixed(2) : 'Unknown'} g/mol</p>
+                                    <p><strong>Hazards:</strong> ${Array.isArray(chemical.hazards) ? chemical.hazards.join(', ') : 'Unknown'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    ${chemical.safety_precautions ? `
+                                        <h6>Safety Precautions</h6>
+                                        <ul class="list-unstyled">
+                                            ${chemical.safety_precautions.map(precaution => `<li><i class="fas fa-shield-alt text-warning me-2"></i>${precaution}</li>`).join('')}
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            ${chemical.first_aid ? `
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <h6><i class="fas fa-first-aid text-danger me-2"></i>First Aid Measures</h6>
+                                        <ul class="list-unstyled">
+                                            ${chemical.first_aid.map(aid => `<li><i class="fas fa-arrow-right text-primary me-2"></i>${aid}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${chemical.storage_requirements ? `
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-warehouse text-info me-2"></i>Storage Requirements</h6>
+                                        <ul class="list-unstyled">
+                                            ${chemical.storage_requirements.map(req => `<li><i class="fas fa-arrow-right text-primary me-2"></i>${req}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-recycle text-success me-2"></i>Disposal Methods</h6>
+                                        <ul class="list-unstyled">
+                                            ${chemical.disposal_methods ? chemical.disposal_methods.map(method => `<li><i class="fas fa-arrow-right text-primary me-2"></i>${method}</li>`).join('') : '<li>Follow local regulations</li>'}
+                                        </ul>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        contentDiv.innerHTML = html;
+        
+        // Update status
+        statusDiv.innerHTML = '<i class="fas fa-robot me-1"></i>AI Enhanced';
+        statusDiv.className = 'badge bg-success';
+    }
+    
+    resultsDiv.style.display = 'block';
+}
+
+function startVoiceSearch() {
+    if (typeof startVoiceCommand === 'function') {
+        startVoiceCommand('msds');
+    } else {
+        alert('Voice recognition not available');
+    }
+}
+
+document.getElementById('msdsSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchMSDSWithGemini();
+    }
+});
+
+// Simple Periodic Table Implementation
+const elementsData = [
+{ "number": 1, "symbol": "H", "name": "Hydrogen", "mass": 1.008, "groupBlock": "Nonmetal", "row": 1, "col": 1 },
+{ "number": 2, "symbol": "He", "name": "Helium", "mass": 4.0026, "groupBlock": "Noble gas", "row": 1, "col": 18 },
+{ "number": 3, "symbol": "Li", "name": "Lithium", "mass": 6.94, "groupBlock": "Alkali metal", "row": 2, "col": 1 },
+{ "number": 4, "symbol": "Be", "name": "Beryllium", "mass": 9.012183, "groupBlock": "Alkaline earth metal", "row": 2, "col": 2 },
+{ "number": 5, "symbol": "B", "name": "Boron", "mass": 10.81, "groupBlock": "Metalloid", "row": 2, "col": 13 },
+{ "number": 6, "symbol": "C", "name": "Carbon", "mass": 12.011, "groupBlock": "Nonmetal", "row": 2, "col": 14 },
+{ "number": 7, "symbol": "N", "name": "Nitrogen", "mass": 14.007, "groupBlock": "Nonmetal", "row": 2, "col": 15 },
+{ "number": 8, "symbol": "O", "name": "Oxygen", "mass": 15.999, "groupBlock": "Nonmetal", "row": 2, "col": 16 },
+{ "number": 9, "symbol": "F", "name": "Fluorine", "mass": 18.998, "groupBlock": "Nonmetal", "row": 2, "col": 17 },
+{ "number": 10, "symbol": "Ne", "name": "Neon", "mass": 20.18, "groupBlock": "Noble gas", "row": 2, "col": 18 },
+{ "number": 11, "symbol": "Na", "name": "Sodium", "mass": 22.99, "groupBlock": "Alkali metal", "row": 3, "col": 1 },
+{ "number": 12, "symbol": "Mg", "name": "Magnesium", "mass": 24.305, "groupBlock": "Alkaline earth metal", "row": 3, "col": 2 },
+{ "number": 13, "symbol": "Al", "name": "Aluminum", "mass": 26.982, "groupBlock": "Post-transition metal", "row": 3, "col": 13 },
+{ "number": 14, "symbol": "Si", "name": "Silicon", "mass": 28.085, "groupBlock": "Metalloid", "row": 3, "col": 14 },
+{ "number": 15, "symbol": "P", "name": "Phosphorus", "mass": 30.974, "groupBlock": "Nonmetal", "row": 3, "col": 15 },
+{ "number": 16, "symbol": "S", "name": "Sulfur", "mass": 32.06, "groupBlock": "Nonmetal", "row": 3, "col": 16 },
+{ "number": 17, "symbol": "Cl", "name": "Chlorine", "mass": 35.45, "groupBlock": "Nonmetal", "row": 3, "col": 17 },
+{ "number": 18, "symbol": "Ar", "name": "Argon", "mass": 39.948, "groupBlock": "Noble gas", "row": 3, "col": 18 },
+{ "number": 19, "symbol": "K", "name": "Potassium", "mass": 39.098, "groupBlock": "Alkali metal", "row": 4, "col": 1 },
+{ "number": 20, "symbol": "Ca", "name": "Calcium", "mass": 40.078, "groupBlock": "Alkaline earth metal", "row": 4, "col": 2 },
+{ "number": 21, "symbol": "Sc", "name": "Scandium", "mass": 44.956, "groupBlock": "Transition metal", "row": 4, "col": 3 },
+{ "number": 22, "symbol": "Ti", "name": "Titanium", "mass": 47.867, "groupBlock": "Transition metal", "row": 4, "col": 4 },
+{ "number": 23, "symbol": "V", "name": "Vanadium", "mass": 50.942, "groupBlock": "Transition metal", "row": 4, "col": 5 },
+{ "number": 24, "symbol": "Cr", "name": "Chromium", "mass": 51.996, "groupBlock": "Transition metal", "row": 4, "col": 6 },
+{ "number": 25, "symbol": "Mn", "name": "Manganese", "mass": 54.938, "groupBlock": "Transition metal", "row": 4, "col": 7 },
+{ "number": 26, "symbol": "Fe", "name": "Iron", "mass": 55.845, "groupBlock": "Transition metal", "row": 4, "col": 8 },
+{ "number": 27, "symbol": "Co", "name": "Cobalt", "mass": 58.933, "groupBlock": "Transition metal", "row": 4, "col": 9 },
+{ "number": 28, "symbol": "Ni", "name": "Nickel", "mass": 58.693, "groupBlock": "Transition metal", "row": 4, "col": 10 },
+{ "number": 29, "symbol": "Cu", "name": "Copper", "mass": 63.546, "groupBlock": "Transition metal", "row": 4, "col": 11 },
+{ "number": 30, "symbol": "Zn", "name": "Zinc", "mass": 65.38, "groupBlock": "Transition metal", "row": 4, "col": 12 },
+{ "number": 31, "symbol": "Ga", "name": "Gallium", "mass": 69.723, "groupBlock": "Post-transition metal", "row": 4, "col": 13 },
+{ "number": 32, "symbol": "Ge", "name": "Germanium", "mass": 72.63, "groupBlock": "Metalloid", "row": 4, "col": 14 },
+{ "number": 33, "symbol": "As", "name": "Arsenic", "mass": 74.922, "groupBlock": "Metalloid", "row": 4, "col": 15 },
+{ "number": 34, "symbol": "Se", "name": "Selenium", "mass": 78.971, "groupBlock": "Nonmetal", "row": 4, "col": 16 },
+{ "number": 35, "symbol": "Br", "name": "Bromine", "mass": 79.904, "groupBlock": "Nonmetal", "row": 4, "col": 17 },
+{ "number": 36, "symbol": "Kr", "name": "Krypton", "mass": 83.798, "groupBlock": "Noble gas", "row": 4, "col": 18 },
+{ "number": 37, "symbol": "Rb", "name": "Rubidium", "mass": 85.468, "groupBlock": "Alkali metal", "row": 5, "col": 1 },
+{ "number": 38, "symbol": "Sr", "name": "Strontium", "mass": 87.62, "groupBlock": "Alkaline earth metal", "row": 5, "col": 2 },
+{ "number": 39, "symbol": "Y", "name": "Yttrium", "mass": 88.906, "groupBlock": "Transition metal", "row": 5, "col": 3 },
+{ "number": 40, "symbol": "Zr", "name": "Zirconium", "mass": 91.224, "groupBlock": "Transition metal", "row": 5, "col": 4 },
+{ "number": 41, "symbol": "Nb", "name": "Niobium", "mass": 92.906, "groupBlock": "Transition metal", "row": 5, "col": 5 },
+{ "number": 42, "symbol": "Mo", "name": "Molybdenum", "mass": 95.95, "groupBlock": "Transition metal", "row": 5, "col": 6 },
+{ "number": 43, "symbol": "Tc", "name": "Technetium", "mass": 98, "groupBlock": "Transition metal", "row": 5, "col": 7 },
+{ "number": 44, "symbol": "Ru", "name": "Ruthenium", "mass": 101.07, "groupBlock": "Transition metal", "row": 5, "col": 8 },
+{ "number": 45, "symbol": "Rh", "name": "Rhodium", "mass": 102.91, "groupBlock": "Transition metal", "row": 5, "col": 9 },
+{ "number": 46, "symbol": "Pd", "name": "Palladium", "mass": 106.42, "groupBlock": "Transition metal", "row": 5, "col": 10 },
+{ "number": 47, "symbol": "Ag", "name": "Silver", "mass": 107.87, "groupBlock": "Transition metal", "row": 5, "col": 11 },
+{ "number": 48, "symbol": "Cd", "name": "Cadmium", "mass": 112.41, "groupBlock": "Transition metal", "row": 5, "col": 12 },
+{ "number": 49, "symbol": "In", "name": "Indium", "mass": 114.82, "groupBlock": "Post-transition metal", "row": 5, "col": 13 },
+{ "number": 50, "symbol": "Sn", "name": "Tin", "mass": 118.71, "groupBlock": "Post-transition metal", "row": 5, "col": 14 },
+{ "number": 51, "symbol": "Sb", "name": "Antimony", "mass": 121.76, "groupBlock": "Metalloid", "row": 5, "col": 15 },
+{ "number": 52, "symbol": "Te", "name": "Tellurium", "mass": 127.6, "groupBlock": "Metalloid", "row": 5, "col": 16 },
+{ "number": 53, "symbol": "I", "name": "Iodine", "mass": 126.9, "groupBlock": "Nonmetal", "row": 5, "col": 17 },
+{ "number": 54, "symbol": "Xe", "name": "Xenon", "mass": 131.29, "groupBlock": "Noble gas", "row": 5, "col": 18 },
+{ "number": 55, "symbol": "Cs", "name": "Cesium", "mass": 132.91, "groupBlock": "Alkali metal", "row": 6, "col": 1 },
+{ "number": 56, "symbol": "Ba", "name": "Barium", "mass": 137.33, "groupBlock": "Alkaline earth metal", "row": 6, "col": 2 },
+{ "number": 57, "symbol": "La", "name": "Lanthanum", "mass": 138.91, "groupBlock": "Lanthanoid", "row": 8, "col": 3 },
+{ "number": 58, "symbol": "Ce", "name": "Cerium", "mass": 140.12, "groupBlock": "Lanthanoid", "row": 8, "col": 4 },
+{ "number": 59, "symbol": "Pr", "name": "Praseodymium", "mass": 140.91, "groupBlock": "Lanthanoid", "row": 8, "col": 5 },
+{ "number": 60, "symbol": "Nd", "name": "Neodymium", "mass": 144.24, "groupBlock": "Lanthanoid", "row": 8, "col": 6 },
+{ "number": 61, "symbol": "Pm", "name": "Promethium", "mass": 145, "groupBlock": "Lanthanoid", "row": 8, "col": 7 },
+{ "number": 62, "symbol": "Sm", "name": "Samarium", "mass": 150.36, "groupBlock": "Lanthanoid", "row": 8, "col": 8 },
+{ "number": 63, "symbol": "Eu", "name": "Europium", "mass": 151.96, "groupBlock": "Lanthanoid", "row": 8, "col": 9 },
+{ "number": 64, "symbol": "Gd", "name": "Gadolinium", "mass": 157.25, "groupBlock": "Lanthanoid", "row": 8, "col": 10 },
+{ "number": 65, "symbol": "Tb", "name": "Terbium", "mass": 158.93, "groupBlock": "Lanthanoid", "row": 8, "col": 11 },
+{ "number": 66, "symbol": "Dy", "name": "Dysprosium", "mass": 162.5, "groupBlock": "Lanthanoid", "row": 8, "col": 12 },
+{ "number": 67, "symbol": "Ho", "name": "Holmium", "mass": 164.93, "groupBlock": "Lanthanoid", "row": 8, "col": 13 },
+{ "number": 68, "symbol": "Er", "name": "Erbium", "mass": 167.26, "groupBlock": "Lanthanoid", "row": 8, "col": 14 },
+{ "number": 69, "symbol": "Tm", "name": "Thulium", "mass": 168.93, "groupBlock": "Lanthanoid", "row": 8, "col": 15 },
+{ "number": 70, "symbol": "Yb", "name": "Ytterbium", "mass": 173.05, "groupBlock": "Lanthanoid", "row": 8, "col": 16 },
+{ "number": 71, "symbol": "Lu", "name": "Lutetium", "mass": 174.97, "groupBlock": "Lanthanoid", "row": 8, "col": 17 },
+{ "number": 72, "symbol": "Hf", "name": "Hafnium", "mass": 178.49, "groupBlock": "Transition metal", "row": 6, "col": 4 },
+{ "number": 73, "symbol": "Ta", "name": "Tantalum", "mass": 180.95, "groupBlock": "Transition metal", "row": 6, "col": 5 },
+{ "number": 74, "symbol": "W", "name": "Tungsten", "mass": 183.84, "groupBlock": "Transition metal", "row": 6, "col": 6 },
+{ "number": 75, "symbol": "Re", "name": "Rhenium", "mass": 186.21, "groupBlock": "Transition metal", "row": 6, "col": 7 },
+{ "number": 26, "symbol": "Os", "name": "Osmium", "mass": 190.23, "groupBlock": "Transition metal", "row": 6, "col": 8 },
+{ "number": 77, "symbol": "Ir", "name": "Iridium", "mass": 192.22, "groupBlock": "Transition metal", "row": 6, "col": 9 },
+{ "number": 78, "symbol": "Pt", "name": "Platinum", "mass": 195.08, "groupBlock": "Transition metal", "row": 6, "col": 10 },
+{ "number": 79, "symbol": "Au", "name": "Gold", "mass": 196.97, "groupBlock": "Transition metal", "row": 6, "col": 11 },
+{ "number": 80, "symbol": "Hg", "name": "Mercury", "mass": 200.59, "groupBlock": "Transition metal", "row": 6, "col": 12 },
+{ "number": 81, "symbol": "Tl", "name": "Thallium", "mass": 204.38, "groupBlock": "Post-transition metal", "row": 6, "col": 13 },
+{ "number": 82, "symbol": "Pb", "name": "Lead", "mass": 207.2, "groupBlock": "Post-transition metal", "row": 6, "col": 14 },
+{ "number": 83, "symbol": "Bi", "name": "Bismuth", "mass": 208.98, "groupBlock": "Post-transition metal", "row": 6, "col": 15 },
+{ "number": 84, "symbol": "Po", "name": "Polonium", "mass": 209, "groupBlock": "Metalloid", "row": 6, "col": 16 },
+{ "number": 85, "symbol": "At", "name": "Astatine", "mass": 210, "groupBlock": "Metalloid", "row": 6, "col": 17 },
+{ "number": 86, "symbol": "Rn", "name": "Radon", "mass": 222, "groupBlock": "Noble gas", "row": 6, "col": 18 },
+{ "number": 87, "symbol": "Fr", "name": "Francium", "mass": 223, "groupBlock": "Alkali metal", "row": 7, "col": 1 },
+{ "number": 88, "symbol": "Ra", "name": "Radium", "mass": 226, "groupBlock": "Alkaline earth metal", "row": 7, "col": 2 },
+{ "number": 89, "symbol": "Ac", "name": "Actinium", "mass": 227, "groupBlock": "Actinoid", "row": 9, "col": 3 },
+{ "number": 90, "symbol": "Th", "name": "Thorium", "mass": 232.04, "groupBlock": "Actinoid", "row": 9, "col": 4 },
+{ "number": 91, "symbol": "Pa", "name": "Protactinium", "mass": 231.04, "groupBlock": "Actinoid", "row": 9, "col": 5 },
+{ "number": 92, "symbol": "U", "name": "Uranium", "mass": 238.03, "groupBlock": "Actinoid", "row": 9, "col": 6 },
+{ "number": 93, "symbol": "Np", "name": "Neptunium", "mass": 237, "groupBlock": "Actinoid", "row": 9, "col": 7 },
+{ "number": 94, "symbol": "Pu", "name": "Plutonium", "mass": 244, "groupBlock": "Actinoid", "row": 9, "col": 8 },
+{ "number": 95, "symbol": "Am", "name": "Americium", "mass": 243, "groupBlock": "Actinoid", "row": 9, "col": 9 },
+{ "number": 96, "symbol": "Cm", "name": "Curium", "mass": 247, "groupBlock": "Actinoid", "row": 9, "col": 10 },
+{ "number": 97, "symbol": "Bk", "name": "Berkelium", "mass": 247, "groupBlock": "Actinoid", "row": 9, "col": 11 },
+{ "number": 98, "symbol": "Cf", "name": "Californium", "mass": 251, "groupBlock": "Actinoid", "row": 9, "col": 12 },
+{ "number": 99, "symbol": "Es", "name": "Einsteinium", "mass": 252, "groupBlock": "Actinoid", "row": 9, "col": 13 },
+{ "number": 100, "symbol": "Fm", "name": "Fermium", "mass": 257, "groupBlock": "Actinoid", "row": 9, "col": 14 },
+{ "number": 101, "symbol": "Md", "name": "Mendelevium", "mass": 258, "groupBlock": "Actinoid", "row": 9, "col": 15 },
+{ "number": 102, "symbol": "No", "name": "Nobelium", "mass": 259, "groupBlock": "Actinoid", "row": 9, "col": 16 },
+{ "number": 103, "symbol": "Lr", "name": "Lawrencium", "mass": 266, "groupBlock": "Actinoid", "row": 9, "col": 17 },
+{ "number": 104, "symbol": "Rf", "name": "Rutherfordium", "mass": 267, "groupBlock": "Transition metal", "row": 7, "col": 4 },
+{ "number": 105, "symbol": "Db", "name": "Dubnium", "mass": 268, "groupBlock": "Transition metal", "row": 7, "col": 5 },
+{ "number": 106, "symbol": "Sg", "name": "Seaborgium", "mass": 269, "groupBlock": "Transition metal", "row": 7, "col": 6 },
+{ "number": 107, "symbol": "Bh", "name": "Bohrium", "mass": 270, "groupBlock": "Transition metal", "row": 7, "col": 7 },
+{ "number": 108, "symbol": "Hs", "name": "Hassium", "mass": 277, "groupBlock": "Transition metal", "row": 7, "col": 8 },
+{ "number": 109, "symbol": "Mt", "name": "Meitnerium", "mass": 278, "groupBlock": "Transition metal", "row": 7, "col": 9 },
+{ "number": 110, "symbol": "Ds", "name": "Darmstadtium", "mass": 281, "groupBlock": "Transition metal", "row": 7, "col": 10 },
+{ "number": 111, "symbol": "Rg", "name": "Roentgenium", "mass": 282, "groupBlock": "Transition metal", "row": 7, "col": 11 },
+{ "number": 112, "symbol": "Cn", "name": "Copernicium", "mass": 285, "groupBlock": "Transition metal", "row": 7, "col": 12 },
+{ "number": 113, "symbol": "Nh", "name": "Nihonium", "mass": 286, "groupBlock": "Post-transition metal", "row": 7, "col": 13 },
+{ "number": 114, "symbol": "Fl", "name": "Flerovium", "mass": 289, "groupBlock": "Post-transition metal", "row": 7, "col": 14 },
+{ "number": 115, "symbol": "Mc", "name": "Moscovium", "mass": 290, "groupBlock": "Post-transition metal", "row": 7, "col": 15 },
+{ "number": 116, "symbol": "Lv", "name": "Livermorium", "mass": 293, "groupBlock": "Post-transition metal", "row": 7, "col": 16 },
+{ "number": 117, "symbol": "Ts", "name": "Tennessine", "mass": 294, "groupBlock": "Metalloid", "row": 7, "col": 17 },
+{ "number": 118, "symbol": "Og", "name": "Oganesson", "mass": 294, "groupBlock": "Noble gas", "row": 7, "col": 18 }
+].map(el => ({ ...el, category: el.groupBlock.toLowerCase().replace(/\s+/g, '-') }));
+
+const categoryDetails = {
+    'alkali-metal': { name: 'Alkali Metal', colorClass: 'alkali-metal' },
+    'alkaline-earth-metal': { name: 'Alkaline Earth Metal', colorClass: 'alkaline-earth-metal' },
+    'lanthanide': { name: 'Lanthanide', colorClass: 'lanthanide' },
+    'actinide': { name: 'Actinide', colorClass: 'actinide' },
+    'transition-metal': { name: 'Transition Metal', colorClass: 'transition-metal' },
+    'post-transition-metal': { name: 'Post-transition Metal', colorClass: 'post-transition-metal' },
+    'metalloid': { name: 'Metalloid', colorClass: 'metalloid' },
+    'nonmetal': { name: 'Reactive Nonmetal', colorClass: 'reactive-nonmetal' },
+    'noble-gas': { name: 'Noble Gas', colorClass: 'noble-gas' },
+    'unknown': { name: 'Unknown', colorClass: 'unknown' }
+};
+
+const table = document.getElementById('periodic-table');
+const modal = document.getElementById('element-modal');
+const modalContent = document.getElementById('modal-content');
+let currentElement = null;
+
+function populateTable() {
+    elementsData.forEach(el => {
+        const elementDiv = document.createElement('div');
+        elementDiv.className = `element ${el.category}`;
+        elementDiv.style.gridRow = el.row;
+        elementDiv.style.gridColumn = el.col;
+        elementDiv.dataset.number = el.number;
+
+        elementDiv.innerHTML = `
+            <div class="atomic-number">${el.number}</div>
+            <div class="symbol">${el.symbol}</div>
+            <div class="name">${el.name}</div>
+            <div class="atomic-mass">${el.mass}</div>
+        `;
+        
+        table.appendChild(elementDiv);
+    });
+    
+    // Add placeholders for Lanthanide/Actinide series
+    const lanthanidePlaceholder = document.createElement('div');
+    lanthanidePlaceholder.className = 'element lanthanide d-flex align-items-center justify-content-center text-center';
+    lanthanidePlaceholder.style.gridRow = 6;
+    lanthanidePlaceholder.style.gridColumn = 3;
+    lanthanidePlaceholder.innerHTML = '<small>57-71</small>';
+    table.appendChild(lanthanidePlaceholder);
+
+    const actinidePlaceholder = document.createElement('div');
+    actinidePlaceholder.className = 'element actinide d-flex align-items-center justify-content-center text-center';
+    actinidePlaceholder.style.gridRow = 7;
+    actinidePlaceholder.style.gridColumn = 3;
+    actinidePlaceholder.innerHTML = '<small>89-103</small>';
+    table.appendChild(actinidePlaceholder);
+}
+
+
+function showModal(atomicNumber) {
+    const element = elementsData.find(e => e.number == atomicNumber);
+    if (!element) return;
+    
+    currentElement = element;
+    const categoryName = categoryDetails[element.category]?.name || 'Unknown';
+    const categoryColorClass = categoryDetails[element.category]?.colorClass || 'unknown';
+
+    modalContent.innerHTML = `
+        <div class="d-flex align-items-center gap-4 border-bottom pb-4 mb-4">
+             <div class="flex-shrink-0 w-24 h-24 rounded d-flex flex-column align-items-center justify-content-center ${categoryColorClass}">
+                <div class="small">${element.number}</div>
+                <div class="h4 mb-0">${element.symbol}</div>
+            </div>
+            <div>
+                <h2 class="h4 mb-1">${element.name}</h2>
+                <p class="text-muted mb-0">${categoryName}</p>
+            </div>
+        </div>
+        <div>
+            <h6 class="fw-bold mb-3">Properties</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><strong>Atomic Mass:</strong> ${element.mass} u</li>
+                        <li><strong>Atomic Number:</strong> ${element.number}</li>
+                        <li><strong>Symbol:</strong> ${element.symbol}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><strong>Category:</strong> ${categoryName}</li>
+                        <li><strong>Name:</strong> ${element.name}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+
+// Event listeners
+table.addEventListener('click', (e) => {
+    const elementDiv = e.target.closest('.element');
+    if (elementDiv && elementDiv.dataset.number) {
+        showModal(elementDiv.dataset.number);
+    }
+});
+
+document.getElementById('search-msds-btn').addEventListener('click', () => {
+    if (currentElement) {
+        document.getElementById('msdsSearch').value = currentElement.name;
+        searchMSDS();
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    populateTable();
+});
+
+</script>
+{% endblock %}
