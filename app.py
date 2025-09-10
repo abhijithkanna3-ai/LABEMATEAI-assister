@@ -21,7 +21,8 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
-
+from routes.main_routes import main_bp
+app.register_blueprint(main_bp)
 # Import models first to get db instance
 import models
 db = models.db
