@@ -3,10 +3,12 @@ services:
     name: labmateai
     env: python
     plan: free
-    buildCommand: pip install -r pyproject.toml
-    startCommand: python main.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
     envVars:
       - key: FLASK_ENV
         value: production
       - key: FLASK_APP
         value: main.py
+
+
