@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: labmateai
+    env: python
+    plan: free
+    buildCommand: pip install -r pyproject.toml
+    startCommand: python main.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: main.py
